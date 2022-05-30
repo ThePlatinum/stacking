@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convert Tron Address</title>
+<!--  type="javascript" -->
+  <script>
+    let interval = setInterval(()=>{
+      if (window.tronWeb) {
+        document.getElementById('convertBtn').style.display = 'block';
+        clearInterval(interval);
+      }
+    }, 1000)
+
+    function convert(){
+      let addr = document.getElementById('address').value
+
+      if (window.tronWeb) {
+        let converted ;
+        try {
+          converted = window.tronWeb.address.toHex(addr)
+        } catch (e) {
+          converted = 'Invalid Address'
+        }
+        if (converted) {
+          document.getElementById('converted').innerHTML = converted;
+        } else {
+          document.getElementById('converted').innerHTML = 'Invalid Address';
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body{
+      padding: 5%;
+      margin: 0;
+    }
+    input {
+      padding: 0.75rem 1rem;
+      border-radius: 5px;
+      border-width: 1px;
+    }
+    input[type=button] {
+      border: none;
+      background-color: blue;
+      color: white;
+      display: none;
+    }
+    div{
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+  </style>
+
+</head>
+<body>
+
+  <div>
+    Enter the address to convert
+    <input type="text" id="address" >
+    <input type="button" value="Convert" onclick="convert()" id="convertBtn">
+
+    <div> <p id="converted"></p> </div>
+  </div>
+</body>
+</html>
