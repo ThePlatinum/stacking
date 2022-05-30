@@ -23,7 +23,7 @@ contract CubieStacking is ITRC721Receiver {
 //   TJvi1RYg3s8dC8iRgBmNmj8SEiXQEbv2Rt 
 //   TJ3ZpFJJsdhqubCmn3G8pJ3SDta7huMoVd
 
-  // bytes4 private constant _TRC721_RECEIVED = 0x5175f878;
+  bytes4 private constant _TRC721_RECEIVED = 0x5175f878;
 
   address public constant TOKEN_CONTRACT = address(0x624018ef691468fe66a307a077f39dc208e13910);
   address public constant NFT_CONTRACT = address(0x58940b5fb48f9836993ecf7dd4d5d72748be317d);
