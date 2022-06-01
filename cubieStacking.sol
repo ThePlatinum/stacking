@@ -58,8 +58,6 @@ contract CubieStacking is TRC721TokenReceiver {
       require(vault[tokenId].tokenId == 0, "You can only stake once");
       require(power[i] < 4, "Invalid mining power");
       
-      require(_checkOnTRC721Received(msg.sender, address(this), tokenId, ""), "TRC721: transfer to non TRC721Receiver implementer");
-
       NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
       emit CubieStaked(msg.sender, tokenId, block.timestamp);
 
