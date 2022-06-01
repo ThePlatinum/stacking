@@ -1,5 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity ^ 0.8.0;
+pragma solidity ^ 0.6.0;
 
 /**
  * @title TRC721 token receiver interface
@@ -12,10 +11,8 @@ interface TRC721TokenReceiver {
 
 contract CubieStacking is TRC721TokenReceiver {
   
-  // 41624018ef691468fe66a307a077f39dc208e13910
-  // 4158940b5fb48f9836993ecf7dd4d5d72748be317d
-  address public constant TOKEN_CONTRACT = address(0x624018ef691468fe66a307a077f39dc208e13910);
-  address public constant NFT_CONTRACT = address(0x58940b5fb48f9836993ecf7dd4d5d72748be317d);
+  address public TOKEN_CONTRACT;
+  address public NFT_CONTRACT;
   
   address public admin;
   uint256 public totalStaked;
@@ -34,7 +31,10 @@ contract CubieStacking is TRC721TokenReceiver {
 
   mapping(uint256 => Stake) public vault;
 
-  constructor() {
+  constructor (address _Token, address _NFT) public {
+    TOKEN_CONTRACT = _Token;
+    NFT_CONTRACT = _NFT;
+
     admin = msg.sender;
     setDailyReward(10000000);
   }
@@ -49,33 +49,18 @@ contract CubieStacking is TRC721TokenReceiver {
     return dailyReward;
   }
 
-  function ownerOfNFT(uint256 tokenId) public view returns(bool) {
-    (bool success, bytes memory returnData) = NFT_CONTRACT.call(
-      abi.encodeWithSignature("ownerOf(uint256)", tokenId)
-    );
-    require(success);
-    return true;
-  }
-
-  function safeTransferNFTFrom(address from, address to, uint256 tokenId) public {
-    require(msg.sender == admin, "Only admin can transfer NFT");
-    require(ownerOfNFT(tokenId), "Token does not exist");
-    (bool success, bytes memory returnData) = NFT_CONTRACT.send(
-      abi.encodeWithSignature("safeTransferFrom(address,address,uint256)", from, to, tokenId)
-    );
-    require(success);
-  }
-
   function stake(uint256[] calldata tokenIds, uint256 power) external {
     uint256 tokenId;
     totalStaked += tokenIds.length;
     for (uint i = 0; i <= tokenIds.length; i++) {
       tokenId = tokenIds[i];
-      require(ownerOfNFT(tokenId) == msg.sender, "You can only stake your own token");
+      require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
       require(vault[tokenId].tokenId == 0, "You can only stake once");
       require(power[i] < 4, "Invalid mining power");
+      
+      require(_checkOnTRC721Received(msg.sender, address(this), tokenId, ""), "TRC721: transfer to non TRC721Receiver implementer");
 
-      safeTransferNFTFrom(msg.sender, address(this), tokenId);
+      NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
       emit CubieStaked(msg.sender, tokenId, block.timestamp);
 
       vault[tokenId] = Stake({
@@ -84,6 +69,7 @@ contract CubieStacking is TRC721TokenReceiver {
         owner: msg.sender,
         power: power[i]
       });
+
     }
   }
 
@@ -95,9 +81,9 @@ contract CubieStacking is TRC721TokenReceiver {
 
       Stake memory staked = vault[tokenId];
       require(staked.owner == msg.sender, "You can only unstake your own token");
-      require(ownerOfNFT(tokenId) == address(this), "This token is not staked");
+      require(NFT_CONTRACT.ownerOf(tokenId) == address(this), "This token is not staked");
 
-      safeTransferNFTFrom(address(this), account, tokenId);
+      NFT_CONTRACT.safeTransferFrom(address(this), account, tokenId);
       emit CubieUnstaked(msg.sender, tokenId, block.timestamp);
 
       delete vault[tokenId];
@@ -112,7 +98,7 @@ contract CubieStacking is TRC721TokenReceiver {
     // Making it 1 mins for testing 
     require(staked.timestamp + 60 * 60 < block.timestamp, "Token must be staked for atleast 24 hrs");
     // 24*
-    require(ownerOfNFT(tokenId) == address(this), "This token is not staked");
+    require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "Not your token");
     // Calculate the reward
     earned += getDailyReward() * staked.power * (block.timestamp - staked.timestamp) / 1 days;
     return earned;
@@ -125,10 +111,7 @@ contract CubieStacking is TRC721TokenReceiver {
       uint256 earned = earnings(account, tokenIds[i]);
 
       if (earned > 0) {
-        (bool success, bytes memory returnData) = TOKEN_CONTRACT.call(
-          abi.encodeWithSignature("transfer(address,uint256)", account, earned)
-        );
-        require(success);
+        TOKEN_CONTRACT.transferFrom(owner, account, earned);
         
         emit RewardClaimed(account, earned);
       }
