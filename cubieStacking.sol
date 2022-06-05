@@ -93,7 +93,7 @@ contract CubieStacking is TRC721, Ownable, ITRC721Receiver {
   address public NFT_CONTRACT;
   
   uint256 public totalStaked;
-  uint256 public dailyReward;
+  uint256 public dailyReward = 10000000;
 
   struct Stake{
     uint256 tokenId;
@@ -112,7 +112,7 @@ contract CubieStacking is TRC721, Ownable, ITRC721Receiver {
     TOKEN_CONTRACT = _Token;
     NFT_CONTRACT = _NFT;
     
-    setDailyReward(10000000);
+    // setDailyReward(10000000);
   }
 
   function setDailyReward(uint256 value) public onlyOwner returns(string memory) {
