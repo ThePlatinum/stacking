@@ -166,7 +166,7 @@ contract CubieStacking is TRC721, Ownable, ITRC721Receiver {
     }
   }
 
-  function earnings(address account, uint256 tokenId) public returns(uint256) {
+  function earnings(address account, uint256 tokenId) public view returns(uint256) {
     uint256 earned = 0;
       
     Stake memory staked = vault[tokenId];
