@@ -91,7 +91,6 @@ contract CubieStacking is Ownable, ITRC721Receiver {
 
   function earnings(address account, uint256 tokenId) public returns(uint256) {
     uint256 earned = 0;
-      
     Stake memory staked = vault[tokenId];
     require(staked.owner == account, "You can only claim from your own token");
     require(staked.timestamp + 60 * 60 < block.timestamp, "Token must be staked for atleast 24 hrs");
