@@ -52,12 +52,11 @@ contract Ownable {
   }
 }
 
-contract CubieStacking is Ownable {
+contract CubieStacking is Ownable, TRC721TokenReceiver {
 
   ITRC20 public immutable TOKEN_CONTRACT;
   ITRC721 public immutable NFT_CONTRACT;
 
-  uint256 public totalStaked;
   uint256 internal dailyReward = 10000000;
 
   event CubieStaked( address indexed owner, uint256 tokenId, uint256 value);
@@ -65,17 +64,18 @@ contract CubieStacking is Ownable {
   event RewardClaimed( address owner, uint256 reward);
 
   mapping(uint256 => Stake) public vault;
-    constructor( address _NFT_CONTRACT, address _TOKEN_CONTRACT) {
-      NFT_CONTRACT = ITRC721(_NFT_CONTRACT);
-      TOKEN_CONTRACT = ITRC20(_TOKEN_CONTRACT);
-    }
 
-    struct Stake {
-      address owner;
-      uint256 tokenId;
-      uint256 timestamp;
-      uint256 power;
-    }
+  constructor( address payable _NFT_CONTRACT, address payable _TOKEN_CONTRACT) payable {
+    NFT_CONTRACT = ITRC721(_NFT_CONTRACT);
+    TOKEN_CONTRACT = ITRC20(_TOKEN_CONTRACT);
+  }
+
+  struct Stake {
+    address owner;
+    uint256 tokenId;
+    uint256 timestamp;
+    uint256 power;
+  }
 
   function setDailyReward(uint256 value) public onlyOwner returns(string memory) {
     dailyReward = value;
@@ -86,82 +86,63 @@ contract CubieStacking is Ownable {
     return dailyReward;
   }
 
-  function stake(uint256[] calldata tokenIds, uint256[] calldata power) external {
-    uint256 tokenId;
-    totalStaked += tokenIds.length;
-    for (uint i = 0; i <= tokenIds.length; i++) {
-      tokenId = tokenIds[i];
-      require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
-      require(vault[tokenId].tokenId == 0, "You can only stake once");
-      require(power[i] < 4, "Invalid mining power");
+  function stake(uint256 tokenId, uint256 power) external payable {
+    require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
+    require(vault[tokenId].tokenId == 0, "You can only stake once");
+    require(power < 4, "Invalid mining power");
+    require(msg.value < address(this).balance, 'Not enough balance');
 
-      NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId); 
-      emit CubieStaked(msg.sender, tokenId, block.timestamp);
+    NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
+    emit CubieStaked(msg.sender, tokenId, block.timestamp);
 
-      vault[tokenId] = Stake({
-        tokenId: tokenId,
-        timestamp: block.timestamp,
-        owner: msg.sender,
-        power: power[i]
-      });
-
-    }
+    vault[tokenId] = Stake({
+      tokenId: tokenId,
+      timestamp: block.timestamp,
+      owner: msg.sender,
+      power: power
+    });
   }
 
-  function unstake( address account, uint256[] memory tokenIds) internal {
-    uint256 tokenId;
-    totalStaked -= tokenIds.length;
-    for (uint i = 0; i <= tokenIds.length; i++) {
-      tokenId = tokenIds[i];
+  function unstake(address account, uint256 tokenId) internal {
+    Stake memory staked = vault[tokenId];
+    require(staked.owner == msg.sender, "You can only unstake your own token");
+    require(NFT_CONTRACT.ownerOf(tokenId) == address(this), "This token is not staked");
 
-      Stake memory staked = vault[tokenId];
-      require(staked.owner == msg.sender, "You can only unstake your own token");
-      require(NFT_CONTRACT.ownerOf(tokenId) == address(this), "This token is not staked");
+    NFT_CONTRACT.safeTransferFrom( address(this), account, tokenId);
+    emit CubieUnstaked(msg.sender, tokenId, block.timestamp);
 
-      NFT_CONTRACT.safeTransferFrom( address(this), account, tokenId);
-      emit CubieUnstaked(msg.sender, tokenId, block.timestamp);
-
-      delete vault[tokenId];
-    }
+    delete vault[tokenId];
   }
 
-  function earnings( address account, uint256 tokenId) public view returns(uint256) {
+  function earnings(address account, uint256 tokenId) public view returns(uint256) {
     uint256 earned = 0;
-      
     Stake memory staked = vault[tokenId];
     require(staked.owner == account, "You can only claim from your own token");
-    // Making it 1 mins for testing 
-    require(staked.timestamp + (6 * 60) < block.timestamp, "Token must be staked for atleast 24 hrs");
-    // 24*60
-    require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "Not your token");
+    // Making it 1 mins for testing 24*60
+    require(staked.timestamp + (6 * 1) < block.timestamp, "Token must be staked for atleast 24 hrs");
     // Calculate the reward
     earned += getDailyReward() * staked.power * (block.timestamp - staked.timestamp) / 1 days;
     return earned;
   }
 
-  function claim( address payable claimer, uint256[] calldata tokenIds, bool _unstake) external {
+  function claim( address payable claimer, uint256 tokenId) external {
     
-    for (uint i = 0; i <= tokenIds.length; i++) {
-      
-      uint256 earned = earnings(claimer, tokenIds[i]);
+    uint256 earned = earnings(claimer, tokenId);
 
-      if (earned > 0) {
-        bool success = TOKEN_CONTRACT.transferFrom(owner(), claimer, earned);
-        require(success);
-        emit RewardClaimed(claimer, earned);
-      }
-    }
-
-    if (_unstake) {
-      unstake(claimer, tokenIds);
+    if (earned > 0) {
+      bool success = TOKEN_CONTRACT.transferFrom(owner(), claimer, earned);
+      require(success);
+      emit RewardClaimed(claimer, earned);
+      unstake(claimer, tokenId);
     }
   }
 
   function onTRC721Received(
-    address operator, address from,
-    uint256 tokenId,
-    bytes calldata data  ) external returns(bytes4)
-  {
-      return bytes4(keccak256("onTRC721Received(address,address,uint256,bytes)"));
+    address,
+    address,
+    uint256,
+    bytes memory
+  ) public virtual override returns (bytes4) {
+    return this.onTRC721Received.selector;
   }
 }
