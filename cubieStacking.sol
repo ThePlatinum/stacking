@@ -76,7 +76,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
   }
 
   mapping(uint256 => Stake) public vault;
-  mapping(address => uint256[]) public userStacks;
+  mapping(address => uint256[]) private userStacks;
   mapping(uint256 => uint256) public hasPaid;
 
   function setDailyReward(uint256 value) public onlyOwner returns(string memory) {
@@ -88,27 +88,30 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     return dailyReward;
   }
 
-  function stake(uint256[] calldata  tokenIds, uint256[] calldata  powers) external payable {
-    for (uint i = 0; i <= tokenIds.length; i++) {
-      uint256 tokenId = tokenIds[i];
-      uint256 power = powers[i];
+  function _tokensOfOwner() public view returns (uint256[] memory){
+    return _tokensOfOwner(msg.sender);
+  }
 
-      require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
-      require(vault[tokenId].tokenId == 0, "You can only stake once");
-      require(power < 6, "Invalid mining power");
+  function _tokensOfOwner(address owner) public view returns (uint256[] memory) {
+    return userStacks[owner];
+  }
 
-      NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
-      emit CubieStaked(msg.sender, tokenId, block.timestamp);
+  function stake(uint256 tokenId, uint256 power) external payable {
+    require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
+    require(vault[tokenId].tokenId == 0, "You can only stake once");
+    require(power < 6, "Invalid mining power");
 
-      vault[tokenId] = Stake({
-        tokenId: tokenId,
-        timestamp: block.timestamp,
-        owner: msg.sender,
-        power: power
-      });
-      userStacks[msg.sender].push(tokenId);
-      hasPaid[tokenId] = 0;
-    }
+    NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
+    emit CubieStaked(msg.sender, tokenId, block.timestamp);
+
+    vault[tokenId] = Stake({
+      tokenId: tokenId,
+      timestamp: block.timestamp,
+      owner: msg.sender,
+      power: power
+    });
+    userStacks[msg.sender].push(tokenId);
+    hasPaid[tokenId] = 0;
   }
 
   function unstake(uint256 tokenId) internal {
@@ -152,6 +155,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
       unstake(tokenId);
     }
   }
+
   function onTRC721Received(
     address,
     address,
