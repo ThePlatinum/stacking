@@ -53,7 +53,7 @@ contract Ownable {
 }
 
 contract CubieStacking is Ownable, TRC721TokenReceiver {
-  
+
   ITRC20 public immutable TOKEN_CONTRACT;
   ITRC721 public immutable NFT_CONTRACT;
 
@@ -64,7 +64,6 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
   event RewardClaimed( address owner, uint256 reward);
 
   constructor( address payable _NFT_CONTRACT, address payable _TOKEN_CONTRACT) payable {
-    require(msg.value > 999, "Constructor: Send a minimum of 1 trx");
     NFT_CONTRACT = ITRC721(_NFT_CONTRACT);
     TOKEN_CONTRACT = ITRC20(_TOKEN_CONTRACT);
   }
@@ -74,11 +73,11 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     uint256 tokenId;
     uint256 timestamp;
     uint256 power;
-    uint256 hasPaid;
   }
 
-  mapping(uint256 => Stake) internal vault;
+  mapping(uint256 => Stake) public vault;
   mapping(address => uint256[]) public userStacks;
+  mapping(uint256 => uint256) public hasPaid;
 
   function setDailyReward(uint256 value) public onlyOwner returns(string memory) {
     dailyReward = value;
@@ -93,7 +92,6 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
     require(vault[tokenId].tokenId == 0, "You can only stake once");
     require(power < 6, "Invalid mining power");
-    require(msg.value < address(this).balance, "Not enough balance");
 
     NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
     emit CubieStaked(msg.sender, tokenId, block.timestamp);
@@ -102,22 +100,20 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
       tokenId: tokenId,
       timestamp: block.timestamp,
       owner: msg.sender,
-      power: power,
-      hasPaid: 0
+      power: power
     });
     userStacks[msg.sender].push(tokenId);
+    hasPaid[tokenId] = 0;
   }
 
-  function unstake( uint256 tokenId) internal {
-    Stake memory staked = vault[tokenId];
-    require(staked.owner == msg.sender, "You can only unstake your own token");
+  function unstake(uint256 tokenId) internal {
     require(NFT_CONTRACT.ownerOf(tokenId) == address(this), "This token is not staked");
 
-    NFT_CONTRACT.safeTransferFrom( address(this), msg.sender, tokenId);
+    NFT_CONTRACT.safeTransferFrom(address(this), msg.sender, tokenId);
     emit CubieUnstaked(msg.sender, tokenId, block.timestamp);
 
     delete vault[tokenId];
-    delete userStacks[msg.sender][tokenId];
+    // delete userStacks[msg.sender][tokenId];
   }
 
   function earnings(uint256 tokenId) public view returns(uint256) {
@@ -126,8 +122,8 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     require(staked.owner == msg.sender, "You can only claim from your own token");
     require(staked.timestamp + (1 minutes) < block.timestamp, "Token must be staked for atleast 24 hrs");
 
-    earned = getDailyReward() * (staked.power/100) * ( (block.timestamp - staked.timestamp) / (1 minutes) );
-    uint256 toPay = (earned - staked.hasPaid);
+    earned = ( (getDailyReward() * staked.power) /100 ) * ( (block.timestamp - staked.timestamp) / (1 minutes) );
+    uint256 toPay = (earned - hasPaid[tokenId]);
 
     if (toPay > 0) {
       return toPay;
@@ -137,16 +133,15 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     }
   }
 
-  function claim( uint256 tokenId, bool _unstake) external {
+  function claim(uint256 tokenId, bool _unstake) external {
     address claimer = payable(msg.sender);
     uint256 earned = earnings(tokenId);
-    Stake memory staked = vault[tokenId];
 
     if (earned > 0) {
       bool success = TOKEN_CONTRACT.transfer(claimer, earned);
-      require(success);
-      staked.hasPaid += earned;
+      hasPaid[tokenId] += earned;
       emit RewardClaimed(claimer, earned);
+      require(success);
     }
     if(_unstake){
       unstake(tokenId);
