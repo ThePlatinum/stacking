@@ -1210,7 +1210,7 @@ contract Cubie is TRC721, TRC721Enumerable, TRC721MetadataMintable {
       require(_to != address(0x0), "Minting to the null address is not allowed");
       require(_tokenId.length < 5, "Only Max of 4 Cubie Tokens per person is allowed");
       require(_tokenId.length > 0, "No Cubie Tokens to mint");
-      require(msg.value >= 4000000 * _tokenId.length, "Cubie price is 4000TRX per token");
+      require(msg.value >= 4000 * _tokenId.length, "Cubie price is 4000TRX per token");
 
       for (uint i = 0; i < _tokenId.length; i++) {
         mintWithTokenURI( _to, _tokenId[i], _tokenId[i].toString() );
