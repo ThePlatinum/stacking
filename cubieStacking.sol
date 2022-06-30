@@ -156,6 +156,25 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     }
   }
 
+  function withdrawBalance(address payable _to) public onlyOwner returns(uint256) {
+    uint256 contract_balance = TOKEN_CONTRACT.balanceOf(address(this));
+    bool success = TOKEN_CONTRACT.transfer(_to, contract_balance);
+    require(success);
+    return contract_balance;
+  }
+
+  function stopStake() public onlyOwner returns(string memory) {
+    stakeOn = false;
+    stake_stoped_at = block.timestamp;
+    return "Staking Stopped";
+  }
+
+  function restartStake() public onlyOwner returns(string memory) {
+    stakeOn = true;
+    stake_stoped_at = 0;
+    return "Staking restarted";
+  }
+
   function onTRC721Received(
     address,
     address,
