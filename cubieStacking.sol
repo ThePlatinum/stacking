@@ -58,6 +58,8 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
   ITRC721 public immutable NFT_CONTRACT;
 
   uint256 internal dailyReward = 10000000;
+  bool public stakeOn = true;
+  uint256 internal stake_stoped_at = 0;
 
   event CubieStaked( address indexed owner, uint256 tokenId, uint256 value);
   event CubieUnstaked( address indexed owner, uint256 tokenId, uint256 value);
@@ -100,6 +102,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "You can only stake your own token");
     require(vault[tokenId].tokenId == 0, "You can only stake once");
     require(power < 6, "Invalid mining power");
+    require(stakeOn, "Staking has been ended or paused");
 
     NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
     emit CubieStaked(msg.sender, tokenId, block.timestamp);
@@ -130,7 +133,12 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     require(staked.owner == msg.sender, "You can only claim from your own token");
     require(staked.timestamp + (1 minutes) < block.timestamp, "Token must be staked for atleast 24 hrs");
 
-    earned = ( (getDailyReward() * staked.power) /100 ) * ( (block.timestamp - staked.timestamp) / (1 minutes) );
+    if (!stakeOn){
+      earned = ( (getDailyReward() * staked.power) /100 ) * ( (block.timestamp - staked.timestamp - stake_stoped_at) / (1 minutes) );
+    }
+    else {
+      earned = ( (getDailyReward() * staked.power) /100 ) * ( (block.timestamp - staked.timestamp) / (1 minutes) );
+    }
     uint256 toPay = (earned - hasPaid[tokenId]);
 
     if (toPay > 0) {
