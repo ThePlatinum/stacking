@@ -134,10 +134,11 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     require(staked.timestamp + (1 minutes) < block.timestamp, "Token must be staked for atleast 24 hrs");
 
     if (!stakeOn){
-      earned = ( (getDailyReward() * staked.power) /100 ) * ( (block.timestamp - staked.timestamp - stake_stoped_at) / (1 minutes) );
+      earned = getDailyReward() * ((block.timestamp - staked.timestamp - stake_stoped_at)/(1 minutes));
+      //  ( (getDailyReward() * staked.power) /100 ) 
     }
     else {
-      earned = ( (getDailyReward() * staked.power) /100 ) * ( (block.timestamp - staked.timestamp) / (1 minutes) );
+      earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
     }
     uint256 toPay = (earned - hasPaid[tokenId]);
 
