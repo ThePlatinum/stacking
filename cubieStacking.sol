@@ -57,7 +57,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
   ITRC20 public immutable TOKEN_CONTRACT;
   ITRC721 public immutable NFT_CONTRACT;
 
-  uint256 internal dailyReward = 10000000;
+  uint256 internal dailyReward = 10 * 1e16;
   bool public stakeOn = true;
   uint256 internal stake_stoped_at = 0;
 
@@ -82,7 +82,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
   mapping(uint256 => uint256) public hasPaid;
 
   function setDailyReward(uint256 value) public onlyOwner returns(string memory) {
-    dailyReward = value;
+    dailyReward = value * 1e16;
     return "Daily reward set";
   }
 
@@ -135,19 +135,15 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
 
     if (!stakeOn){
       earned = getDailyReward() * ((block.timestamp - staked.timestamp - stake_stoped_at)/(1 minutes));
-      //  ( (getDailyReward() * staked.power) /100 ) 
+      //  ( getDailyReward() * staked.power) /100 ) 
     }
     else {
       earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
     }
     uint256 toPay = (earned - hasPaid[tokenId]);
 
-    if (toPay > 0) {
-      return toPay;
-    }
-    else{
-      return earned;
-    }
+    if (toPay > 0) return toPay;
+    else return earned;
   }
 
   function claim(uint256 tokenId, bool _unstake) external {
