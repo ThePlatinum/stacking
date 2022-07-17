@@ -132,15 +132,10 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     uint256 earned = 0;
     Stake memory staked = vault[tokenId];
     require(staked.owner == msg.sender, "You can only claim from your own token");
-    require((staked.timestamp + 1 days) < block.timestamp, "Token must be staked for atleast 24 hrs");
-
-    if (!stakeOn){
-      earned = getDailyReward() * ((block.timestamp - staked.timestamp - stake_stoped_at)/(1 minutes));
-      //  ( getDailyReward() * staked.power) /100 ) 
-    }
-    else {
-      earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
-    }
+    require((staked.timestamp + 1 minutes) < block.timestamp, "Token must be staked for atleast 24 hrs");
+    require((stakeOn), "Staking has been ended or paused");
+    
+    earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
     uint256 toPay = (earned - hasPaid[tokenId]);
 
     if (toPay > 0) return toPay;
