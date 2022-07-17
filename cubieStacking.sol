@@ -10,7 +10,7 @@ interface ITRC20 {
     function allowance( address owner, address spender) external view returns (uint256);
     function transferFrom( address from, address to, uint256 amount ) external returns (bool);
 }
- 
+
 interface ITRC165 {
   function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
@@ -124,6 +124,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     emit CubieUnstaked(msg.sender, tokenId, block.timestamp);
 
     delete vault[tokenId];
+    delete hasPaid[tokenId];
     // delete userStacks[msg.sender][tokenId];
   }
 
@@ -131,7 +132,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     uint256 earned = 0;
     Stake memory staked = vault[tokenId];
     require(staked.owner == msg.sender, "You can only claim from your own token");
-    require(staked.timestamp + (1 minutes) < block.timestamp, "Token must be staked for atleast 24 hrs");
+    require((staked.timestamp + 1 days) < block.timestamp, "Token must be staked for atleast 24 hrs");
 
     if (!stakeOn){
       earned = getDailyReward() * ((block.timestamp - staked.timestamp - stake_stoped_at)/(1 minutes));
@@ -151,10 +152,10 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     uint256 earned = earnings(tokenId);
 
     if (earned > 0) {
-      bool success = TOKEN_CONTRACT.transfer(claimer, earned);
       hasPaid[tokenId] += earned;
-      emit RewardClaimed(claimer, earned);
+      bool success = TOKEN_CONTRACT.transfer(claimer, earned);
       require(success);
+      emit RewardClaimed(claimer, earned);
     }
     if(_unstake){
       unstake(tokenId);
@@ -170,22 +171,14 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
 
   function stopStake() public onlyOwner returns(string memory) {
     stakeOn = false;
-    stake_stoped_at = block.timestamp;
     return "Staking Stopped";
   }
 
   function restartStake() public onlyOwner returns(string memory) {
     stakeOn = true;
-    stake_stoped_at = 0;
     return "Staking restarted";
   }
 
-  function onTRC721Received(
-    address,
-    address,
-    uint256,
-    bytes memory
-  ) public virtual override returns (bytes4) {
-    return this.onTRC721Received.selector;
-  }
+  function onTRC721Received( address, address, uint256, bytes memory )
+  public virtual override returns (bytes4) { return this.onTRC721Received.selector; }
 }
