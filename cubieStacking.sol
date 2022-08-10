@@ -31,6 +31,10 @@ interface ITRC721 is ITRC165 {
   function isApprovedForAll( address owner, address operator) external view returns (bool);
 }
 
+interface ERC721TokenReceiver {
+  function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes calldata _data) external returns(bytes4);
+}
+
 interface TRC721TokenReceiver {
   function onTRC721Received(address _operator, address _from, uint256 _tokenId, bytes calldata _data) external returns(bytes4);
 }
@@ -170,6 +174,9 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
   function restartStake() public onlyOwner {
     stakeOn = 1;
   }
+
+  function onERC721Received( address, address, uint256, bytes memory )
+  public virtual override returns (bytes4) { return this.onERC721Received.selector; }
 
   function onTRC721Received( address, address, uint256, bytes memory )
   public virtual override returns (bytes4) { return this.onTRC721Received.selector; }
