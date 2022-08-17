@@ -31,7 +31,7 @@ interface ITRC721 is ITRC165 {
   function isApprovedForAll( address owner, address operator) external view returns (bool);
 }
 
-interface ERC721TokenReceiver {
+interface IERC721Receiver {
   function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes calldata _data) external returns(bytes4);
 }
 
@@ -56,7 +56,7 @@ contract Ownable {
   }
 }
 
-contract CubieStacking is Ownable, TRC721TokenReceiver {
+contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
 
   ITRC20 public immutable TOKEN_CONTRACT;
   ITRC721 public immutable NFT_CONTRACT;
@@ -105,7 +105,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "Not yours");
     require(vault[tokenId].tokenId == 0, "Only stake once");
     require(power < 6, "Invalid");
-    require(stakeOn, "Paused or Ended");
+    require(stakeOn == 1, "Paused or Ended");
 
 
     NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
@@ -136,7 +136,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver {
     Stake memory staked = vault[tokenId];
     require(staked.owner == msg.sender, "Not yours");
     require((staked.timestamp + 1 minutes) < block.timestamp, "Must stake for 24 hrs");
-    require(stakeOn, "Paused or Ended");
+    require(stakeOn == 1, "Paused or Ended");
 
     uint256 earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
     uint256 toPay = (earned - hasPaid[tokenId]);
