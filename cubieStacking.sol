@@ -56,7 +56,36 @@ contract Ownable {
   }
 }
 
-contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
+contract Enumerable {
+
+    uint256[] private _allTokens;
+    mapping(uint256 => uint256) private _allTokensIndex;
+
+    function totalSupply() public view returns (uint256) {
+        return _allTokens.length;
+    }
+
+    function totalSupplyId() public view returns (uint256 [] memory) {
+        return _allTokens;
+    }
+
+    function _addToken(uint256 tokenId) public {
+        _allTokensIndex[tokenId] = _allTokens.length;
+        _allTokens.push(tokenId);
+    }
+
+    function _removeToken(uint256 tokenId) public {
+        uint256 lastTokenIndex = _allTokens.length - 1;
+        uint256 tokenIndex = _allTokensIndex[tokenId];
+        uint256 lastTokenId = _allTokens[lastTokenIndex];
+        _allTokens[tokenIndex] = lastTokenId;
+        _allTokensIndex[lastTokenId] = tokenIndex;
+        _allTokens.pop();
+        _allTokensIndex[tokenId] = 0;
+    }
+}
+
+contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumerable {
 
   ITRC20 public immutable TOKEN_CONTRACT;
   ITRC721 public immutable NFT_CONTRACT;
@@ -65,7 +94,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
   uint256 public stakeOn = 1;
   uint256 internal stake_stoped_at = 0;
 
-  event CubieStaked( address indexed owner, uint256 tokenId, uint256 value);
+  event CubieStaked  ( address indexed owner, uint256 tokenId, uint256 value);
   event CubieUnstaked( address indexed owner, uint256 tokenId, uint256 value);
   event RewardClaimed( address owner, uint256 reward);
 
@@ -107,7 +136,6 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
     require(power < 6, "Invalid");
     require(stakeOn == 1, "Paused or Ended");
 
-
     NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
     emit CubieStaked(msg.sender, tokenId, block.timestamp);
 
@@ -119,6 +147,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
     });
     userStacks[msg.sender].push(tokenId);
     hasPaid[tokenId] = 0;
+    _addToken(tokenId);
   }
 
   function unstake(uint256 tokenId) internal {
@@ -129,6 +158,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
 
     delete vault[tokenId];
     delete hasPaid[tokenId];
+    _removeToken(tokenId);
     // delete userStacks[msg.sender][tokenId];
   }
 
@@ -147,7 +177,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
 
   function claim(uint256 tokenId, bool _unstake) external {
     address claimer = payable(msg.sender);
-    uint256 earned = earnings(tokenId);
+    uint256 earned = earnings(tokenId); // The checks happens here
 
     if (earned > 0) {
       hasPaid[tokenId] += earned;
@@ -155,16 +185,18 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver {
       require(success);
       emit RewardClaimed(claimer, earned);
     }
-    if(_unstake){
-      unstake(tokenId);
-    }
+    if(_unstake) unstake(tokenId); 
   }
 
-  function withdrawBalance(address payable _to) public onlyOwner returns(uint256) {
+  function withdrawBalance(address payable _to) public onlyOwner {
     uint256 contract_balance = TOKEN_CONTRACT.balanceOf(address(this));
     bool success = TOKEN_CONTRACT.transfer(_to, contract_balance);
     require(success);
-    return contract_balance;
+  }
+ 
+  function forceWithdraws() public onlyOwner {
+    // Get all currently stacked tokens (from a Vault)
+    // For each of them, pay their claim to their owner
   }
 
   function stopStake() public onlyOwner {
