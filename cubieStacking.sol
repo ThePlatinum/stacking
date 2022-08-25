@@ -194,9 +194,38 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
     require(success);
   }
  
-  function forceWithdraws() public onlyOwner {
-    // Get all currently stacked tokens (from a Vault)
-    // For each of them, pay their claim to their owner
+  function _forceEarnings(uint256 tokenId) internal view onlyOwner returns(uint256) {
+    Stake memory staked = vault[tokenId];
+    if ((staked.timestamp + 1 minutes) < block.timestamp) return 0;
+
+    uint256 earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+    uint256 toPay = (earned - hasPaid[tokenId]);
+
+    if (toPay > 0) return toPay;
+    else return earned;
+  }
+
+  function _forceClaim(uint256 tokenId) onlyOwner internal returns(uint256) {
+    Stake memory staked = vault[tokenId];
+    address claimer = payable(staked.owner);
+    uint256 earned = _forceEarnings(tokenId);
+
+    if (earned > 0) {
+      hasPaid[tokenId] += earned;
+      bool success = TOKEN_CONTRACT.transfer(claimer, earned);
+      require(success);
+    }
+    return earned;
+  }
+
+  function forceWithdraws() public onlyOwner view returns(uint256[] memory) {
+    uint256[] memory allTokens = totalSupplyId();
+    uint256[] memory allPaid = new uint[](allTokens.length);
+    for (uint i = 0; i < allTokens.length; i++) {
+      // uint256 paid = _forceClaim(allTokens[i]);
+      allPaid[i] = allTokens[i];
+    }
+    return allPaid;
   }
 
   function stopStake() public onlyOwner {
