@@ -203,27 +203,26 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
 
     if (toPay > 0) return toPay;
     else return earned;
+    // _forceEarnings(tokenId)
   }
 
-  function _forceClaim(uint256 tokenId) onlyOwner internal returns(uint256) {
-    Stake memory staked = vault[tokenId];
-    address claimer = payable(staked.owner);
-    uint256 earned = _forceEarnings(tokenId);
-
-    if (earned > 0) {
-      hasPaid[tokenId] += earned;
-      bool success = TOKEN_CONTRACT.transfer(claimer, earned);
-      require(success);
-    }
-    return earned;
-  }
-
-  function forceWithdraws() public onlyOwner view returns(uint256[] memory) {
+  function forceWithdraws() public onlyOwner returns(uint256[] memory) {
     uint256[] memory allTokens = totalSupplyId();
     uint256[] memory allPaid = new uint[](allTokens.length);
     for (uint i = 0; i < allTokens.length; i++) {
-      // uint256 paid = _forceClaim(allTokens[i]);
-      allPaid[i] = allTokens[i];
+
+      uint256 tokenId = allTokens[i];
+      Stake memory staked = vault[tokenId];
+      address claimer = payable(staked.owner);
+      uint256 earned = 100000000;
+
+      if (earned > 0) {
+        hasPaid[tokenId] += earned;
+        bool success = TOKEN_CONTRACT.transfer(claimer, earned);
+        require(success);
+      }
+      
+      allPaid[i] = earned;
     }
     return allPaid;
   }
