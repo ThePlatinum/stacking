@@ -193,18 +193,6 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
     bool success = TOKEN_CONTRACT.transfer(_to, contract_balance);
     require(success);
   }
- 
-  function _forceEarnings(uint256 tokenId) internal view onlyOwner returns(uint256) {
-    Stake memory staked = vault[tokenId];
-    if ((staked.timestamp + 1 minutes) < block.timestamp) return 0;
-
-    uint256 earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
-    uint256 toPay = (earned - hasPaid[tokenId]);
-
-    if (toPay > 0) return toPay;
-    else return earned;
-    // _forceEarnings(tokenId)
-  }
 
   function forceWithdraws() public onlyOwner returns(uint256[] memory) {
     uint256[] memory allTokens = totalSupplyId();
@@ -213,16 +201,20 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
 
       uint256 tokenId = allTokens[i];
       Stake memory staked = vault[tokenId];
-      address claimer = payable(staked.owner);
-      uint256 earned = 100000000;
 
+      if ((staked.timestamp + 1 minutes) < block.timestamp) continue;
+
+      address claimer = payable(staked.owner);
+      uint256 earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+      uint256 toPay = earned - hasPaid[tokenId];
+      
       if (earned > 0) {
-        hasPaid[tokenId] += earned;
-        bool success = TOKEN_CONTRACT.transfer(claimer, earned);
+        hasPaid[tokenId] += toPay;
+        bool success = TOKEN_CONTRACT.transfer(claimer, toPay);
         require(success);
       }
       
-      allPaid[i] = earned;
+      allPaid[i] = toPay;
     }
     return allPaid;
   }
