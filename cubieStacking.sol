@@ -168,11 +168,8 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
     require((staked.timestamp + 1 minutes) < block.timestamp, "Must stake for 24 hrs");
     require(stakeOn == 1, "Paused or Ended");
 
-    uint256 earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
-    uint256 toPay = (earned - hasPaid[tokenId]);
-
-    if (toPay > 0) return toPay;
-    else return earned;
+    uint256 toPay = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+    return (toPay - hasPaid[tokenId]);
   }
 
   function claim(uint256 tokenId, bool _unstake) external {
@@ -205,10 +202,10 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
       if ((staked.timestamp + 1 minutes) < block.timestamp) continue;
 
       address claimer = payable(staked.owner);
-      uint256 earned = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+      uint256 earned = 1000000; //getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
       uint256 toPay = earned - hasPaid[tokenId];
       
-      if (earned > 0) {
+      if (toPay > 0) {
         hasPaid[tokenId] += toPay;
         bool success = TOKEN_CONTRACT.transfer(claimer, toPay);
         require(success);
