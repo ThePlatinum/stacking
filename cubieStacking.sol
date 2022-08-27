@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 interface ITRC20 {
-    event Transfer( address indexed from, address indexed to, uint256 value);
-    event Approval( address indexed owner, address indexed spender, uint256 value);
-    function totalSupply() external view returns (uint256);
-    function balanceOf( address account) external view returns (uint256);
-    function transfer( address to, uint256 amount) external returns (bool);
-    function allowance( address owner, address spender) external view returns (uint256);
-    function transferFrom( address from, address to, uint256 amount ) external returns (bool);
+  event Transfer( address indexed from, address indexed to, uint256 value);
+  event Approval( address indexed owner, address indexed spender, uint256 value);
+  function totalSupply() external view returns (uint256);
+  function balanceOf( address account) external view returns (uint256);
+  function transfer( address to, uint256 amount) external returns (bool);
+  function allowance( address owner, address spender) external view returns (uint256);
+  function transferFrom( address from, address to, uint256 amount ) external returns (bool);
 }
 
 interface ITRC165 {
@@ -62,26 +62,26 @@ contract Enumerable {
     mapping(uint256 => uint256) private _allTokensIndex;
 
     function totalSupply() public view returns (uint256) {
-        return _allTokens.length;
+      return _allTokens.length;
     }
 
     function totalSupplyId() public view returns (uint256 [] memory) {
-        return _allTokens;
+      return _allTokens;
     }
 
     function _addToken(uint256 tokenId) public {
-        _allTokensIndex[tokenId] = _allTokens.length;
-        _allTokens.push(tokenId);
+      _allTokensIndex[tokenId] = _allTokens.length;
+      _allTokens.push(tokenId);
     }
 
     function _removeToken(uint256 tokenId) public {
-        uint256 lastTokenIndex = _allTokens.length - 1;
-        uint256 tokenIndex = _allTokensIndex[tokenId];
-        uint256 lastTokenId = _allTokens[lastTokenIndex];
-        _allTokens[tokenIndex] = lastTokenId;
-        _allTokensIndex[lastTokenId] = tokenIndex;
-        _allTokens.pop();
-        _allTokensIndex[tokenId] = 0;
+      uint256 lastTokenIndex = _allTokens.length - 1;
+      uint256 tokenIndex = _allTokensIndex[tokenId];
+      uint256 lastTokenId = _allTokens[lastTokenIndex];
+      _allTokens[tokenIndex] = lastTokenId;
+      _allTokensIndex[lastTokenId] = tokenIndex;
+      _allTokens.pop();
+      _allTokensIndex[tokenId] = 0;
     }
 }
 
@@ -168,7 +168,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
     require((staked.timestamp + 1 minutes) < block.timestamp, "Must stake for 24 hrs");
     require(stakeOn == 1, "Paused or Ended");
 
-    uint256 toPay = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+    uint256 toPay = getDailyReward() * ((block.timestamp - staked.timestamp)/1 minutes);
     return (toPay - hasPaid[tokenId]);
   }
 
@@ -202,7 +202,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
       if ((staked.timestamp + 1 minutes) < block.timestamp) continue;
 
       address claimer = payable(staked.owner);
-      uint256 earned = 1000000; //getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+      uint256 earned = 1000000; //getDailyReward() * ((block.timestamp - staked.timestamp)/ 1 minutes);
       uint256 toPay = earned - hasPaid[tokenId];
       
       if (toPay > 0) {
