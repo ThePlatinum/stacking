@@ -133,7 +133,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
   function stake(uint256 tokenId, uint256 power) external payable {
     require(NFT_CONTRACT.ownerOf(tokenId) == msg.sender, "Not yours");
     require(vault[tokenId].tokenId == 0, "Only stake once");
-    require(power < 6, "Invalid");
+    require(power < 3, "Invalid");
     require(stakeOn == 1, "Paused or Ended");
 
     NFT_CONTRACT.safeTransferFrom(msg.sender, address(this), tokenId);
@@ -168,7 +168,8 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
     require((staked.timestamp + 1 minutes) < block.timestamp, "Must stake for 24 hrs");
     require(stakeOn == 1, "Paused or Ended");
 
-    uint256 toPay = getDailyReward() * ((block.timestamp - staked.timestamp)/1 minutes);
+    uint256 toPay = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
+    if (staked.power == 2) toPay = (toPay*1.5);
     return (toPay - hasPaid[tokenId]);
   }
 
@@ -202,15 +203,18 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
       if ((staked.timestamp + 1 minutes) < block.timestamp) continue;
 
       address claimer = payable(staked.owner);
-      uint256 earned = 1000000; //getDailyReward() * ((block.timestamp - staked.timestamp)/ 1 minutes);
-      uint256 toPay = earned - hasPaid[tokenId];
-      
+      // To bypass the current dailyReward Error
+      // I will use a constant 1 * 1e16 to calculate the force reward
+      // Till I get a fix for it.
+      uint256 earns = 1*1e16 * ((block.timestamp - staked.timestamp)/1 minutes);
+      if (staked.power == 2) earns = (earns*1.5);
+      uint256 toPay = earns - hasPaid[tokenId];
+
       if (toPay > 0) {
         hasPaid[tokenId] += toPay;
         bool success = TOKEN_CONTRACT.transfer(claimer, toPay);
         require(success);
       }
-      
       allPaid[i] = toPay;
     }
     return allPaid;
