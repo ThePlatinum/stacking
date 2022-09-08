@@ -169,7 +169,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
     require(stakeOn == 1, "Paused or Ended");
 
     uint256 toPay = getDailyReward() * ((block.timestamp - staked.timestamp)/(1 minutes));
-    if (staked.power == 2) toPay = (toPay*1.5);
+    if (staked.power == 2) toPay = (toPay * 3) / 2;
     return (toPay - hasPaid[tokenId]);
   }
 
@@ -207,7 +207,7 @@ contract CubieStacking is Ownable, TRC721TokenReceiver, IERC721Receiver, Enumera
       // I will use a constant 1 * 1e16 to calculate the force reward
       // Till I get a fix for it.
       uint256 earns = 1*1e16 * ((block.timestamp - staked.timestamp)/1 minutes);
-      if (staked.power == 2) earns = (earns*1.5);
+      if (staked.power == 2) earns = (earns * 3) / 2;
       uint256 toPay = earns - hasPaid[tokenId];
 
       if (toPay > 0) {
